@@ -141,18 +141,16 @@ translations['sv']['trash'] = "Papperskorg"
 translations['sv']['userStorageUsageMenuText'] = "__PERCENTAGE__% av __MAX__ använt"
 translations['sv']['goProBadge'] = "Gå Pro"
 translations['sv']['unknownDeviceError'] = "Ett okänt fel inträffade, starta om applikationen eller kontakta support"
-translations['sv']['alertOkButton'] = "OK"
-translations['sv']['alertOkButton'] = "OK"
-translations['sv']['alertOkButton'] = "OK"
-translations['sv']['alertOkButton'] = "OK"
-translations['sv']['alertOkButton'] = "OK"
-translations['sv']['alertOkButton'] = "OK"
 
 module.exports = {
     get: (lang = "en", text, firstUpperCase = true, replaceFrom = [], replaceTo = []) => {
         let gotText = translations[lang][text]
 
         if(!gotText){
+            if(translations['en'][text]){
+                return translations['en'][text]
+            }
+
             return "NO_TRANSLATION_FOUND"
         }
 
