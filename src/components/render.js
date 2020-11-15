@@ -173,15 +173,17 @@ export function render(){
                     </IonButton>
                     <IonMenuButton menu="transfersMenu">
                         {
-                            this.state.transferBadeShowing && (
-                                <IonBadge style={{
+                            (this.state.uploadsCount + this.state.downloadsCount) > 0 && (
+                                <IonBadge color="danger" style={{
                                     position: "absolute",
                                     borderRadius: "50%",
                                     marginTop: "-8px",
                                     marginLeft: "10px",
                                     zIndex: "1001",
                                     fontSize: "7pt"
-                                }}>99</IonBadge>
+                                }}>
+                                    {(this.state.uploadsCount + this.state.downloadsCount)}
+                                </IonBadge>
                             )
                         }
                         <IonIcon icon={Ionicons.repeatOutline} />
@@ -194,7 +196,7 @@ export function render(){
         )
     )
 
-    let bottomFab = this.state.currentHref.split("/")[1] == "base" && (
+    let bottomFab = this.state.currentHref.indexOf("base") !== -1 && (
         <IonFab vertical="bottom" horizontal="end" slot="fixed" onClick={() => this.mainFabAction()}>
             <IonFabButton>
                 <IonIcon icon={Ionicons.add} />
@@ -387,6 +389,25 @@ export function render(){
                                 )
                             }
                             {bottomFab}
+                            <input type="file" id="file-input-dummy" style={{
+                                display: "none"
+                            }} onChange={(e) => {
+                                let files = document.getElementById("file-input-dummy").files
+
+                                if(!files){
+                                    return false
+                                }
+
+                                if(files.length <= 0){
+                                    return false
+                                }
+
+                                for(let i = 0; i < files.length; i++){
+                                    this.queueFileUpload(files[i])
+                                }
+
+                                return true
+                            }} multiple />
                         </IonContent>
                     </div>
                 </IonPage>

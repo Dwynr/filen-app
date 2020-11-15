@@ -1,4 +1,5 @@
 const CryptoJS = require("crypto-js")
+const { call } = require("ionicons/icons")
 
 module.exports = {
     getRandomArbitrary: (min, max) => {
@@ -253,5 +254,305 @@ module.exports = {
             bytes[i] = binary_string.charCodeAt(i);
         }
         return bytes.buffer;
+    },
+    removeIllegalCharsFromString: (str) => {
+        str = str.split("'").join("")
+        str = str.split('"').join("")
+        str = str.split("´").join("")
+        str = str.split("`").join("")
+        str = str.split("<").join("")
+        str = str.split(">").join("")
+        str = str.split("!").join("")
+        str = str.split("^").join("")
+        str = str.split(":").join("")
+        str = str.replace(/(<([^>]+)>)/ig, "")
+    
+        return str
+    },
+    folderNameRegex: (name) => {
+        if(name.substring(0, 1) == "." || name.substring(0, 2) == ".."){
+            return true
+        }
+        
+        return false
+    },
+    nameRegex: (name) => {
+        return false
+    },
+    isAlphaNumeric: (str) => {
+        var code, i, len;
+        
+        for (i = 0, len = str.length; i < len; i++) {
+            code = str.charCodeAt(i);
+            if (!(code > 47 && code < 58) && // numeric (0-9)
+                !(code > 64 && code < 91) && // upper alpha (A-Z)
+                !(code > 96 && code < 123)) { // lower alpha (a-z)
+            return false;
+            }
+        }
+        return true;
+    },
+    convertWordArrayToUint8Array: (wordArray) => {
+        let arrayOfWords = wordArray.hasOwnProperty("words") ? wordArray.words : []
+        let length = wordArray.hasOwnProperty("sigBytes") ? wordArray.sigBytes : arrayOfWords.length * 4
+        let uInt8Array = new Uint8Array(length), index=0, word, i
+    
+        for(i = 0; i < length; i++){
+            word = arrayOfWords[i]
+    
+            uInt8Array[index++] = word >> 24
+            uInt8Array[index++] = (word >> 16) & 0xff
+            uInt8Array[index++] = (word >> 8) & 0xff
+            uInt8Array[index++] = word & 0xff
+        }
+    
+        return uInt8Array
+    },
+    convertUint8ArrayToBinaryString: (u8Array) => {
+        let i, len = u8Array.length, b_str = ""
+    
+        for (i = 0; i < len; i++){
+            b_str += String.fromCharCode(u8Array[i])
+        }
+    
+        return b_str
+    },
+    Semaphore: function(max){
+        var counter = 0;
+        var waiting = [];
+        
+        var take = function() {
+          if (waiting.length > 0 && counter < max){
+            counter++;
+            let promise = waiting.shift();
+            promise.resolve();
+          }
+        }
+        
+        this.acquire = function() {
+          if(counter < max) {
+            counter++
+            return new Promise(resolve => {
+            resolve();
+          });
+          } else {
+            return new Promise((resolve, err) => {
+              waiting.push({resolve: resolve, err: err});
+            });
+          }
+        }
+          
+        this.release = function() {
+         counter--;
+         take();
+        }
+        
+        this.purge = function() {
+          let unresolved = waiting.length;
+        
+          for (let i = 0; i < unresolved; i++) {
+            waiting[i].err('Task has been purged.');
+          }
+        
+          counter = 0;
+          waiting = [];
+          
+          return unresolved;
+        }
+    },
+    checkIfItemParentIsBeingShared: (parentUUID, type, metadata) => {
+        const checkIfIsSharing = async (parent, callback) => {
+            if(parent == "default" || parent == "base"){
+                return callback(false)
+            }
+
+            try{
+                var res = await module.exports.apiRequest("POST", "/v1/share/dir/status", {
+                    apiKey: window.customVariables.apiKey,
+                    uuid: parent
+                })
+            }
+            catch(e){
+                console.log(e)
+
+                return callback(false)
+            }
+
+            if(!res.status){
+                console.log(res.message)
+
+                return callback(false)
+            }
+
+            return callback(res.data.sharing, res.data.users)
+        }
+
+        checkIfIsSharing(parentUUID, async (status, users) => {
+            if(!status){
+                return false
+            }
+
+            for(let i = 0; i < users.length; i++){
+                let user = users[i]
+
+                try{
+                    var usrPubKey = await window.crypto.subtle.importKey("spki", module.exports._base64ToArrayBuffer(user.publicKey), {
+                        name: "RSA-OAEP",
+                        hash: "SHA-512"
+                    }, true, ["encrypt"])
+                }
+                catch(e){
+                    console.log(e)
+
+                    return false
+                }
+
+                let mData = ""
+
+    			if(type == "file"){
+    				mData = JSON.stringify({
+	    				name: metadata.name,
+	    				size: parseInt(metadata.size),
+	    				mime: metadata.mime,
+	    				key: metadata.key
+	    			})
+				}
+				else{
+					mData = JSON.stringify({
+						name: metadata.name
+					})
+                }
+                
+                try{
+                    var encrypted = await window.crypto.subtle.encrypt({
+                        name: "RSA-OAEP"
+                    }, usrPubKey, new TextEncoder().encode(mData))
+                }
+                catch(e){
+                    console.log(e)
+
+                    return false
+                }
+
+                try{
+                    var res = await module.exports.apiRequest("POST", "/v1/share", {
+                        apiKey: window.customVariables.apiKey,
+                        uuid: metadata.uuid,
+                        parent: parentUUID,
+                        email: user.email,
+                        type,
+                        metadata: module.exports.base64ArrayBuffer(encrypted)
+                    })
+                }
+                catch(e){
+                    console.log(e)
+    
+                    return false
+                }
+    
+                if(!res.status){
+                    console.log(res.message)
+    
+                    return false
+                }
+            }
+        })
+    },
+    checkIfItemIsBeingSharedForRename: async (type, uuid, metadata) => {
+        const checkIfIsSharing = async (itemUUID, callback) => {
+            try{
+                var res = await module.exports.apiRequest("POST", "/v1/user/shared/item/status", {
+                    apiKey: window.customVariables.apiKey,
+                    uuid: itemUUID
+                })
+            }
+            catch(e){
+                console.log(e)
+
+                return callback(false)
+            }
+
+            if(!res.status){
+                console.log(res.message)
+
+                return callback(false)
+            }
+
+            return callback(res.data.sharing, res.data.users)
+        }
+
+        checkIfIsSharing(uuid, async (sharing, users) => {
+            if(!sharing){
+                return false
+            }
+
+            for(let i = 0; i < users.length; i++){
+                let user = users[i]
+
+                try{
+                    var usrPubKey = await window.crypto.subtle.importKey("spki", module.exports._base64ToArrayBuffer(user.publicKey), {
+                        name: "RSA-OAEP",
+                        hash: "SHA-512"
+                    }, true, ["encrypt"])
+                }
+                catch(e){
+                    console.log(e)
+
+                    return false
+                }
+
+                let mData = ""
+
+    			if(type == "file"){
+    				mData = JSON.stringify({
+	    				name: metadata.name,
+	    				size: parseInt(metadata.size),
+	    				mime: metadata.mime,
+	    				key: metadata.key
+	    			})
+				}
+				else{
+					mData = JSON.stringify({
+						name: metadata.name
+					})
+                }
+                
+                try{
+                    var encrypted = await window.crypto.subtle.encrypt({
+                        name: "RSA-OAEP"
+                    }, usrPubKey, new TextEncoder().encode(mData))
+                }
+                catch(e){
+                    console.log(e)
+
+                    return false
+                }
+
+                try{
+                    var res = await module.exports.apiRequest("POST", "/v1/user/shared/item/rename", {
+                        apiKey: window.customVariables.apiKey,
+                        uuid,
+                        receiverId: user.id,
+                        metadata: module.exports.base64ArrayBuffer(encrypted)
+                    })
+                }
+                catch(e){
+                    console.log(e)
+    
+                    return false
+                }
+    
+                if(!res.status){
+                    console.log(res.message)
+    
+                    return false
+                }
+            }
+        })
+    },
+    currentParentFolder: () => {
+        let ex = window.location.href.split("/")
+
+        return ex[ex.length - 1]
     }
 }

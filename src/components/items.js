@@ -7,9 +7,8 @@ export async function updateItemList(){
 		return false
 	}
 
-	let route = window.location.href.split("/")
 	let routeEx = window.location.hash.split("/")
-	let parent = route[route.length - 1]
+	let parent = routeEx[routeEx.length - 1]
 
     let loading = await loadingController.create({
         message: ""
@@ -17,7 +16,7 @@ export async function updateItemList(){
 
 	loading.present()
 	
-	if(routeEx[1] == "base"){
+	if(parent == "base"){
 		try{
 			var res = await utils.apiRequest("POST", "/v1/user/baseFolders", {
 				apiKey: this.state.userAPIKey
@@ -102,81 +101,317 @@ export async function updateItemList(){
 
 		return true
 	}
-	else if(routeEx[1] == "shared-in"){
-		try{
-			var usrPrivKey = await window.crypto.subtle.importKey("pkcs8", utils._base64ToArrayBuffer(this.state.userPrivateKey), {
-				name: "RSA-OAEP",
-				hash: "SHA-512"
-			}, true, ["decrypt"])
-		}
-		catch(e){
-			console.log(e)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "unknownDeviceError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		try{
-			var res = await utils.apiRequest("POST", "/v1/user/shared/in", {
-				apiKey: this.state.userAPIKey,
-				uuid: parent,
-				folders: JSON.stringify(["shred-in"]),
-				page: 1,
-				app: "true"
-			})
-		}
-		catch(e){
-			console.log(e)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		if(!res.status){
-			console.log(res.message)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		let items = []
-
-		for(let i = 0; i < res.data.folders.length; i++){
-			let folder = res.data.folders[i]
+	else{
+		if(routeEx[1] == "shared-in"){
+			try{
+				var usrPrivKey = await window.crypto.subtle.importKey("pkcs8", utils._base64ToArrayBuffer(this.state.userPrivateKey), {
+					name: "RSA-OAEP",
+					hash: "SHA-512"
+				}, true, ["decrypt"])
+			}
+			catch(e){
+				console.log(e)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "unknownDeviceError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
 
 			try{
-				let decrypted = await window.crypto.subtle.decrypt({
-					name: "RSA-OAEP"
-				}, usrPrivKey, utils._base64ToArrayBuffer(folder.metadata))
+				var res = await utils.apiRequest("POST", "/v1/user/shared/in", {
+					apiKey: this.state.userAPIKey,
+					uuid: parent,
+					folders: JSON.stringify(["shred-in"]),
+					page: 1,
+					app: "true"
+				})
+			}
+			catch(e){
+				console.log(e)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
 
-				let folderName = JSON.parse(new TextDecoder().decode(decrypted))
+			if(!res.status){
+				console.log(res.message)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
 
-				folderName = folderName.name
+			let items = []
 
+			for(let i = 0; i < res.data.folders.length; i++){
+				let folder = res.data.folders[i]
+
+				try{
+					let decrypted = await window.crypto.subtle.decrypt({
+						name: "RSA-OAEP"
+					}, usrPrivKey, utils._base64ToArrayBuffer(folder.metadata))
+
+					let folderName = JSON.parse(new TextDecoder().decode(decrypted))
+
+					folderName = folderName.name
+
+					let uploadDate = (new Date(folder.timestamp * 1000)).toString().split(" ")
+
+					let item = {
+						type: "folder",
+						uuid: folder.uuid,
+						name: folderName,
+						date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
+						timestamp: folder.timestamp,
+						parent: folder.parent,
+						receiverId: 0,
+						receiverEmail: "",
+						sharerId: folder.sharerId,
+						sharerEmail: folder.sharerEmail
+					}
+
+					items.push(item)
+
+					window.customVariables.cachedFolders[folder.uuid] = item
+				}
+				catch(e){
+					console.log(e)
+				}
+			}
+
+			for(let i = 0; i < res.data.uploads.length; i++){
+				let file = res.data.uploads[i]
+
+				try{
+					let decrypted = await window.crypto.subtle.decrypt({
+						name: "RSA-OAEP"
+					}, usrPrivKey, utils._base64ToArrayBuffer(file.metadata))
+
+					let decryptedMetadata = JSON.parse(new TextDecoder().decode(decrypted))
+
+					let uploadDate = (new Date(file.timestamp * 1000)).toString().split(" ")
+
+					let offline = false
+
+					let item = {
+						type: "file",
+						uuid: file.uuid,
+						name: decryptedMetadata.name,
+						mime: decryptedMetadata.mime,
+						size: decryptedMetadata.size,
+						key: decryptedMetadata.key,
+						bucket: file.bucket,
+						region: file.region,
+						parent: file.parent,
+						rm: file.rm,
+						chunks: file.chunks,
+						date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
+						timestamp: file.timestamp,
+						receiverId: 0,
+						receiverEmail: "",
+						sharerId: file.sharerId,
+						sharerEmail: file.sharerEmail,
+						offline: offline
+					}
+
+					items.push(item)
+
+					window.customVariables.cachedFiles[file.uuid] = item
+				}
+				catch(e){
+					console.log(e)
+				}
+			}
+
+			window.customVariables.itemList = items
+
+			this.setState({
+				itemList: items
+			})
+
+			loading.dismiss()
+
+			return true
+		}
+		else if(routeEx[1] == "shared-out"){
+			try{
+				var res = await utils.apiRequest("POST", "/v1/user/shared/out", {
+					apiKey: this.state.userAPIKey,
+					uuid: parent,
+					folders: JSON.stringify(["default"]),
+					page: 1,
+					app: "true",
+					receiverId: this.state.currentReceiverId
+				})
+			}
+			catch(e){
+				console.log(e)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
+
+			if(!res.status){
+				console.log(res.message)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
+
+			let items = []
+
+			for(let i = 0; i < res.data.folders.length; i++){
+				let folder = res.data.folders[i]
+
+				let folderName = utils.decryptCryptoJSFolderName(folder.metadata, this.state.userMasterKeys, folder.uuid)
+				let uploadDate = (new Date(folder.timestamp * 1000)).toString().split(" ")
+
+				let item = {
+					type: "folder",
+					uuid: folder.uuid,
+					name: folderName,
+					date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
+					timestamp: folder.timestamp,
+					parent: folder.parent,
+					receiverId: folder.receiverId,
+					receiverEmail: folder.receiverEmail,
+					sharerId: 0,
+					sharerEmail: ""
+				}
+
+				items.push(item)
+
+				window.customVariables.cachedFolders[folder.uuid] = item
+			}
+
+			for(let i = 0; i < res.data.uploads.length; i++){
+				let file = res.data.uploads[i]
+
+				let metadata = utils.decryptFileMetadata(file.metadata, this.state.userMasterKeys, file.uuid)
+				let uploadDate = (new Date(file.timestamp * 1000)).toString().split(" ")
+
+				let offline = false
+
+				let item = {
+					type: "file",
+					uuid: file.uuid,
+					name: metadata.name,
+					mime: metadata.mime,
+					size: metadata.size,
+					key: metadata.key,
+					bucket: file.bucket,
+					region: file.region,
+					parent: file.parent,
+					rm: file.rm,
+					chunks: file.chunks,
+					date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
+					timestamp: file.timestamp,
+					receiverId: file.receiverId,
+					receiverEmail: file.receiverEmail,
+					sharerId: 0,
+					sharerEmail: "",
+					offline: offline
+				}
+
+				items.push(item)
+
+				window.customVariables.cachedFiles[file.uuid] = item
+			}
+
+			window.customVariables.itemList = items
+
+			this.setState({
+				itemList: items
+			})
+
+			loading.dismiss()
+
+			return true
+		}
+		else{
+			try{
+				var res = await utils.apiRequest("POST", "/v1/dir/content", {
+					apiKey: this.state.userAPIKey,
+					uuid: parent,
+					folders: JSON.stringify(["default"]),
+					page: 1,
+					app: "true"
+				})
+			}
+			catch(e){
+				console.log(e)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
+
+			if(!res.status){
+				console.log(res.message)
+		
+				window.customFunctions.dismissLoader()
+		
+				let alert = await alertController.create({
+					header: "",
+					subHeader: "",
+					message: language.get(this.state.lang, "apiRequestError"),
+					buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
+				})
+		
+				return alert.present()
+			}
+
+			let items = []
+
+			for(let i = 0; i < res.data.folders.length; i++){
+				let folder = res.data.folders[i]
+
+				let folderName = utils.decryptCryptoJSFolderName(folder.name, this.state.userMasterKeys, folder.uuid)
 				let uploadDate = (new Date(folder.timestamp * 1000)).toString().split(" ")
 
 				let item = {
@@ -188,29 +423,19 @@ export async function updateItemList(){
 					parent: folder.parent,
 					receiverId: 0,
 					receiverEmail: "",
-					sharerId: folder.sharerId,
-					sharerEmail: folder.sharerEmail
+					sharerId: 0,
+					sharerEmail: ""
 				}
 
 				items.push(item)
 
 				window.customVariables.cachedFolders[folder.uuid] = item
 			}
-			catch(e){
-				console.log(e)
-			}
-		}
 
-		for(let i = 0; i < res.data.uploads.length; i++){
-			let file = res.data.uploads[i]
+			for(let i = 0; i < res.data.uploads.length; i++){
+				let file = res.data.uploads[i]
 
-			try{
-				let decrypted = await window.crypto.subtle.decrypt({
-					name: "RSA-OAEP"
-				}, usrPrivKey, utils._base64ToArrayBuffer(file.metadata))
-
-				let decryptedMetadata = JSON.parse(new TextDecoder().decode(decrypted))
-
+				let metadata = utils.decryptFileMetadata(file.metadata, this.state.userMasterKeys, file.uuid)
 				let uploadDate = (new Date(file.timestamp * 1000)).toString().split(" ")
 
 				let offline = false
@@ -218,10 +443,10 @@ export async function updateItemList(){
 				let item = {
 					type: "file",
 					uuid: file.uuid,
-					name: decryptedMetadata.name,
-					mime: decryptedMetadata.mime,
-					size: decryptedMetadata.size,
-					key: decryptedMetadata.key,
+					name: metadata.name,
+					mime: metadata.mime,
+					size: metadata.size,
+					key: metadata.key,
 					bucket: file.bucket,
 					region: file.region,
 					parent: file.parent,
@@ -231,8 +456,8 @@ export async function updateItemList(){
 					timestamp: file.timestamp,
 					receiverId: 0,
 					receiverEmail: "",
-					sharerId: file.sharerId,
-					sharerEmail: file.sharerEmail,
+					sharerId: 0,
+					sharerEmail: "",
 					offline: offline
 				}
 
@@ -240,241 +465,17 @@ export async function updateItemList(){
 
 				window.customVariables.cachedFiles[file.uuid] = item
 			}
-			catch(e){
-				console.log(e)
-			}
-		}
 
-		window.customVariables.itemList = items
+			window.customVariables.itemList = items
 
-		this.setState({
-			itemList: items
-		})
-
-		loading.dismiss()
-
-		return true
-	}
-	else if(routeEx[1] == "shared-out"){
-		try{
-			var res = await utils.apiRequest("POST", "/v1/user/shared/out", {
-				apiKey: this.state.userAPIKey,
-				uuid: parent,
-				folders: JSON.stringify(["default"]),
-				page: 1,
-				app: "true",
-				receiverId: this.state.currentReceiverId
+			this.setState({
+				itemList: items
 			})
+
+			loading.dismiss()
+
+			return true
 		}
-		catch(e){
-			console.log(e)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		if(!res.status){
-			console.log(res.message)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		let items = []
-
-		for(let i = 0; i < res.data.folders.length; i++){
-			let folder = res.data.folders[i]
-
-			let folderName = utils.decryptCryptoJSFolderName(folder.metadata, this.state.userMasterKeys, folder.uuid)
-			let uploadDate = (new Date(folder.timestamp * 1000)).toString().split(" ")
-
-			let item = {
-				type: "folder",
-				uuid: folder.uuid,
-				name: folderName,
-				date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
-				timestamp: folder.timestamp,
-				parent: folder.parent,
-				receiverId: folder.receiverId,
-				receiverEmail: folder.receiverEmail,
-				sharerId: 0,
-				sharerEmail: ""
-			}
-
-			items.push(item)
-
-			window.customVariables.cachedFolders[folder.uuid] = item
-		}
-
-		for(let i = 0; i < res.data.uploads.length; i++){
-			let file = res.data.uploads[i]
-
-			let metadata = utils.decryptFileMetadata(file.metadata, this.state.userMasterKeys, file.uuid)
-			let uploadDate = (new Date(file.timestamp * 1000)).toString().split(" ")
-
-			let offline = false
-
-			let item = {
-				type: "file",
-				uuid: file.uuid,
-				name: metadata.name,
-				mime: metadata.mime,
-				size: metadata.size,
-				key: metadata.key,
-				bucket: file.bucket,
-				region: file.region,
-				parent: file.parent,
-				rm: file.rm,
-				chunks: file.chunks,
-				date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
-				timestamp: file.timestamp,
-				receiverId: file.receiverId,
-				receiverEmail: file.receiverEmail,
-				sharerId: 0,
-				sharerEmail: "",
-				offline: offline
-			}
-
-			items.push(item)
-
-			window.customVariables.cachedFiles[file.uuid] = item
-		}
-
-		window.customVariables.itemList = items
-
-		this.setState({
-			itemList: items
-		})
-
-		loading.dismiss()
-
-		return true
-	}
-	else{
-		try{
-			var res = await utils.apiRequest("POST", "/v1/dir/content", {
-				apiKey: this.state.userAPIKey,
-				uuid: parent,
-				folders: JSON.stringify(["default"]),
-				page: 1,
-				app: "true"
-			})
-		}
-		catch(e){
-			console.log(e)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		if(!res.status){
-			console.log(res.message)
-	
-			window.customFunctions.dismissLoader()
-	
-			let alert = await alertController.create({
-				header: "",
-				subHeader: "",
-				message: language.get(this.state.lang, "apiRequestError"),
-				buttons: [language.get(this.state.lang, "alertOkButton").toUpperCase()]
-			})
-	
-			return alert.present()
-		}
-
-		let items = []
-
-		for(let i = 0; i < res.data.folders.length; i++){
-			let folder = res.data.folders[i]
-
-			let folderName = utils.decryptCryptoJSFolderName(folder.name, this.state.userMasterKeys, folder.uuid)
-			let uploadDate = (new Date(folder.timestamp * 1000)).toString().split(" ")
-
-			let item = {
-				type: "folder",
-				uuid: folder.uuid,
-				name: folderName,
-				date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
-				timestamp: folder.timestamp,
-				parent: folder.parent,
-				receiverId: 0,
-				receiverEmail: "",
-				sharerId: 0,
-				sharerEmail: ""
-			}
-
-			items.push(item)
-
-			window.customVariables.cachedFolders[folder.uuid] = item
-		}
-
-		for(let i = 0; i < res.data.uploads.length; i++){
-			let file = res.data.uploads[i]
-
-			let metadata = utils.decryptFileMetadata(file.metadata, this.state.userMasterKeys, file.uuid)
-			let uploadDate = (new Date(file.timestamp * 1000)).toString().split(" ")
-
-			let offline = false
-
-			let item = {
-				type: "file",
-				uuid: file.uuid,
-				name: metadata.name,
-				mime: metadata.mime,
-				size: metadata.size,
-				key: metadata.key,
-				bucket: file.bucket,
-				region: file.region,
-				parent: file.parent,
-				rm: file.rm,
-				chunks: file.chunks,
-				date: uploadDate[1] + " " + uploadDate[2] + " " + uploadDate[3] + " " + uploadDate[4],
-				timestamp: file.timestamp,
-				receiverId: 0,
-				receiverEmail: "",
-				sharerId: 0,
-				sharerEmail: "",
-				offline: offline
-			}
-
-			items.push(item)
-
-			window.customVariables.cachedFiles[file.uuid] = item
-		}
-
-		window.customVariables.itemList = items
-
-		this.setState({
-			itemList: items
-		})
-
-		loading.dismiss()
-
-		return true
 	}
 }
 

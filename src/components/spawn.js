@@ -3,7 +3,7 @@ import * as utils from "../utils/utils"
 import { toastController, actionSheetController, popoverController } from "@ionic/core"
 import * as Ionicons from 'ionicons/icons';
 
-export async function spawnToast(message, duration){
+export async function spawnToast(message, duration = 3000){
     let toast = await toastController.create({
         message,
         duration
@@ -63,6 +63,24 @@ export async function spawnItemActionSheet(item){
 export async function mainFabAction(){
     let actionSheet = await actionSheetController.create({
         buttons: [
+            {
+                text: language.get(this.state.lang, "fabUploadFiles"),
+                icon: Ionicons.cloudUpload,
+                handler: async () => {
+                    if(utils.currentParentFolder() == "base"){
+                        this.routeTo("/base/default")
+                    }
+
+                    return document.getElementById("file-input-dummy").click()
+                }
+            },
+            {
+                text: language.get(this.state.lang, "fabCreateFolder"),
+                icon: Ionicons.folderOpen,
+                handler: () => {
+                    return false
+                }
+            },
             {
                 text: language.get(this.state.lang, "cancel"),
                 icon: Ionicons.close,

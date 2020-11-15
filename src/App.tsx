@@ -10,6 +10,8 @@ import * as searchComponents from "./components/search"
 import * as renderComponents from "./components/render"
 import * as registerComponents from "./components/register"
 import * as userComponents from "./components/user"
+import * as uploadComponents from "./components/upload"
+
 import * as utils from "./utils/utils"
 import * as language from "./utils/language"
 
@@ -46,7 +48,11 @@ interface AppStates {
 	userStorageUsageMenuText: string,
 	userCurrentStorageUsage: number,
 	userMaxStorage: number,
-	currentReceiverId: number
+	currentReceiverId: number,
+	uploads: any,
+	downloads: any,
+	uploadsCount: number,
+	downloadsCount: number
 }
 
 export default class App extends React.PureComponent<{}, AppStates> {
@@ -77,7 +83,11 @@ export default class App extends React.PureComponent<{}, AppStates> {
 			userStorageUsageMenuText: language.get("en", "userStorageUsageMenuText", false, ["__MAX__", "__PERCENTAGE__"], [utils.formatBytes(0), 0]),
 			userCurrentStorageUsage: 0,
 			userMaxStorage: 0,
-			currentReceiverId: 0
+			currentReceiverId: 0,
+			uploads: {},
+			downloads: {},
+			uploadsCount: 0,
+			downloadsCount: 0
 		}
 
 		this.componentDidMount = this.componentDidMount.bind(this)
@@ -125,6 +135,11 @@ export default class App extends React.PureComponent<{}, AppStates> {
 
 	setMainSearchTerm = searchComponents.setMainSearchTerm.bind(this)
 	hideMainSearchbar = searchComponents.hideMainSearchbar.bind(this)
+
+	queueFileUpload = uploadComponents.queueFileUpload.bind(this)
+	fileExists = uploadComponents.fileExists.bind(this)
+	markUploadAsDone = uploadComponents.markUploadAsDone.bind(this)
+	uploadChunk = uploadComponents.uploadChunk.bind(this)
 
     render = renderComponents.render.bind(this)
 }

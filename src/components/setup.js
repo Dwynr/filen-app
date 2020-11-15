@@ -134,6 +134,8 @@ export async function doSetup(){
         Plugins.SplashScreen.hide()
     }
 
+    window.customVariables.apiKey = getUserAPIKey.value
+
     this.updateUserKeys()
     this.updateUserUsage()
 

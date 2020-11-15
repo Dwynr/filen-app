@@ -6123,12 +6123,20 @@ const createEncryptionWorker = () => {
   	return new Worker((window.URL || window.webkitURL).createObjectURL(blob))
 }
 
-let encryptionWorker = createEncryptionWorker()
+let encryptionWorker = [
+	createEncryptionWorker(),
+	createEncryptionWorker(),
+	createEncryptionWorker(),
+	createEncryptionWorker(),
+	createEncryptionWorker()
+]
 let encryptionWorkerResults = {}
 
-encryptionWorker.onmessage = (e) => {
-	encryptionWorkerResults[e.data.uuid + "_" + e.data.index] = e.data.data
-}
+encryptionWorker.forEach((worker) => {
+	worker.onmessage = (e) => {
+		encryptionWorkerResults[e.data.uuid + "_" + e.data.index] = e.data.data
+	}
+})
 
 const createDecryptionWorker = () => {
 	let blob = new Blob([`
@@ -6261,12 +6269,19 @@ const createDecryptionWorker = () => {
   	return new Worker((window.URL || window.webkitURL).createObjectURL(blob))
 }
 
-let decryptionWorker = createDecryptionWorker()
+let decryptionWorker = [
+	createDecryptionWorker(),
+	createDecryptionWorker(),
+	createDecryptionWorker(),
+	createDecryptionWorker()
+]
 let decryptionWorkerResults = {}
 
-decryptionWorker.onmessage = (e) => {
-	decryptionWorkerResults[e.data.uuid + "_" + e.data.index] = e.data.data
-}
+decryptionWorker.forEach((worker) => {
+	worker.onmessage = (e) => {
+		decryptionWorkerResults[e.data.uuid + "_" + e.data.index] = e.data.data
+	}
+})
 
 const createUtilWorker = () => {
 	let blob = new Blob([`
@@ -6347,9 +6362,15 @@ utilWorker.onmessage = (e) => {
 	utilWorkerResults[e.data.type + "_" + e.data.id] = e.data.data
 }
 
+const getRandomArbitrary = (min, max) => {
+	return Math.floor(Math.random() * (max - min) + min)
+}
+
 module.exports = {
     encryptData: (uuid, index, key, data, callback) => {
-        encryptionWorker.postMessage({
+		let worker = encryptionWorker[getRandomArbitrary(0, encryptionWorker.length - 1)]
+
+        worker.postMessage({
             uuid,
             index,
             key,
@@ -6369,7 +6390,9 @@ module.exports = {
         }, 50)
     },
     decryptData: (uuid, index, key, data, callback) => {
-        decryptionWorker.postMessage({
+		let worker = decryptionWorker[getRandomArbitrary(0, decryptionWorker.length - 1)]
+
+        worker.postMessage({
             uuid,
             index,
             key,

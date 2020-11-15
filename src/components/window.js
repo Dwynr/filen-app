@@ -59,6 +59,14 @@ export function setupWindowFunctions(){
     window.customVariables.cachedFiles = {}
     window.customVariables.keyUpdateInterval = undefined
     window.customVariables.usageUpdateInterval = undefined
+    window.customVariables.apiKey = ""
+    window.customVariables.uploadSemaphore = new utils.Semaphore(10)
+    window.customVariables.uploadChunkSemaphore = new utils.Semaphore(5)
+    window.customVariables.downloadSemaphore = new utils.Semaphore(10)
+    window.customVariables.downloadChunkSemaphore = new utils.Semaphore(30)
+    window.customVariables.uploads = {}
+    window.customVariables.downloads = {}
+    window.customVariables.reloadContentAfterUploadTimeout = undefined
 
     window.onresize = () => {
         this.setState({
