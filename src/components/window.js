@@ -1,8 +1,9 @@
 import { Plugins } from "@capacitor/core"
 import { modalController, popoverController, menuController, alertController, loadingController, actionSheetController } from "@ionic/core"
 import * as language from "../utils/language"
-import * as utils from "../utils/utils"
 import * as Ionicons from 'ionicons/icons';
+
+const utils = require("../utils/utils")
 
 export function windowRouter(){
     window.onhashchange = async () => {
@@ -507,4 +508,7 @@ export function setupWindowFunctions(){
 
         modal.present()
     }
+
+    window.customFunctions.queueFileUpload = this.queueFileUpload
+    window.customFunctions.queueFileDownload = this.queueFileDownload
 }

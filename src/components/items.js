@@ -1,6 +1,8 @@
 import * as language from "../utils/language"
-import * as utils from "../utils/utils"
-import { loadingController, modalController, popoverController, alertController } from "@ionic/core"
+import { loadingController, modalController, popoverController, alertController, actionSheetController } from "@ionic/core"
+import * as Ionicons from 'ionicons/icons';
+
+const utils = require("../utils/utils")
 
 export async function updateItemList(){
 	if(!this.state.isLoggedIn){
@@ -603,4 +605,74 @@ export async function previewItem(item){
     })
 
     return modal.present()
+}
+
+export async function moveItem(item){
+
+}
+
+export async function renameItem(item){
+	
+}
+
+export async function trashItem(item){
+	
+}
+
+export async function shareItem(item){
+	
+}
+
+export async function spawnItemActionSheet(item){
+	let buttons = undefined
+
+	if(item.type == "folder"){
+
+	}
+	else{
+		buttons = [
+			{
+                text: language.get(this.state.lang, "downloadItem"),
+                icon: Ionicons.download,
+                handler: () => {
+                    return this.queueFileDownload(item)
+                }
+			},
+			{
+                text: language.get(this.state.lang, "moveItem"),
+                icon: Ionicons.download,
+                handler: () => {
+                    return this.moveItem(item)
+                }
+			},
+			{
+                text: language.get(this.state.lang, "renameItem"),
+                icon: Ionicons.download,
+                handler: () => {
+                    return this.renameItem(item)
+                }
+            },
+            {
+                text: language.get(this.state.lang, "trashItem"),
+                icon: Ionicons.trash,
+                handler: () => {
+                    return this.trashItem(item)
+                }
+            },
+            {
+                text: language.get(this.state.lang, "cancel"),
+                icon: Ionicons.close,
+                handler: () => {
+                    return actionSheet.dismiss()
+                }
+            }
+        ]
+	}
+
+    let actionSheet = await actionSheetController.create({
+        header: item.name,
+        buttons
+    })
+
+    return actionSheet.present()
 }

@@ -15,10 +15,11 @@ import '@ionic/react/css/display.css';
 import '../theme/variables.css';
 
 import * as Ionicons from 'ionicons/icons';
-import * as utils from "../utils/utils"
 import * as language from "../utils/language"
 
 import Hammer from "rc-hammerjs"
+
+const utils = require("../utils/utils")
 
 export function render(){
     let rowRenderer = ({ index, style }) => {

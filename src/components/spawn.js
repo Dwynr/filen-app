@@ -1,7 +1,8 @@
 import * as language from "../utils/language"
-import * as utils from "../utils/utils"
 import { toastController, actionSheetController, popoverController } from "@ionic/core"
 import * as Ionicons from 'ionicons/icons';
+
+const utils = require("../utils/utils")
 
 export async function spawnToast(message, duration = 3000){
     let toast = await toastController.create({
@@ -34,30 +35,6 @@ export async function spawnMoveToast(){
     })
 
     return toast.present()
-}
-
-export async function spawnItemActionSheet(item){
-    let actionSheet = await actionSheetController.create({
-        header: item.name,
-        buttons: [
-            {
-                text: language.get(this.state.lang, "trashItem"),
-                icon: Ionicons.trash,
-                handler: () => {
-                    console.log("Trash clicked")
-                }
-            },
-            {
-                text: language.get(this.state.lang, "cancel"),
-                icon: Ionicons.close,
-                handler: () => {
-                    return actionSheet.dismiss()
-                }
-            }
-        ]
-    })
-
-    return actionSheet.present()
 }
 
 export async function mainFabAction(){

@@ -11,9 +11,11 @@ import * as renderComponents from "./components/render"
 import * as registerComponents from "./components/register"
 import * as userComponents from "./components/user"
 import * as uploadComponents from "./components/upload"
+import * as downloadComponents from "./components/download"
 
-import * as utils from "./utils/utils"
 import * as language from "./utils/language"
+
+const utils = require("./utils/utils")
 
 declare global {
     interface Window {
@@ -126,10 +128,14 @@ export default class App extends React.PureComponent<{}, AppStates> {
 	clearSelectedItems = itemsComponents.clearSelectedItems.bind(this)
 	selectItemsAction = itemsComponents.selectItemsAction.bind(this)
 	previewItem = itemsComponents.previewItem.bind(this)
+	spawnItemActionSheet = itemsComponents.spawnItemActionSheet.bind(this)
+	moveItem = itemsComponents.moveItem.bind(this)
+	renameItem = itemsComponents.renameItem.bind(this)
+	trashItem = itemsComponents.trashItem.bind(this)
+	shareItem = itemsComponents.shareItem.bind(this)
 
     spawnToast = spawnComponents.spawnToast.bind(this)
     spawnMoveToast = spawnComponents.spawnMoveToast.bind(this)
-    spawnItemActionSheet = spawnComponents.spawnItemActionSheet.bind(this)
 	mainFabAction = spawnComponents.mainFabAction.bind(this)
 	mainMenuPopover = spawnComponents.mainMenuPopover.bind(this)
 
@@ -140,6 +146,10 @@ export default class App extends React.PureComponent<{}, AppStates> {
 	fileExists = uploadComponents.fileExists.bind(this)
 	markUploadAsDone = uploadComponents.markUploadAsDone.bind(this)
 	uploadChunk = uploadComponents.uploadChunk.bind(this)
+
+	queueFileDownload = downloadComponents.queueFileDownload.bind(this)
+	getDownloadDir = downloadComponents.getDownloadDir.bind(this)
+	downloadFileChunk = downloadComponents.downloadFileChunk.bind(this)
 
     render = renderComponents.render.bind(this)
 }

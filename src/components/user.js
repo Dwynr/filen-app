@@ -1,6 +1,7 @@
 import * as language from "../utils/language"
-import * as utils from "../utils/utils"
 import { Plugins } from "@capacitor/core"
+
+const utils = require("../utils/utils")
 
 export async function updateUserKeys(){
     if(!this.state.isLoggedIn){

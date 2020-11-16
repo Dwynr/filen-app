@@ -1,6 +1,7 @@
-import * as utils from "../utils/utils"
 import * as language from "../utils/language"
 import * as workers from "../utils/workers"
+
+const utils = require("../utils/utils")
 
 export async function fileExists(name, parent, callback){
 	try{
@@ -155,9 +156,6 @@ export async function queueFileUpload(file){
 			mime,
 			key
 		}), this.state.userMasterKeys[this.state.userMasterKeys.length - 1])
-
-		let preKey = new TextEncoder().encode(key)
-		let iv = preKey.slice(0, 16)
 
 		let firstDone = false
 		let doFirst = true

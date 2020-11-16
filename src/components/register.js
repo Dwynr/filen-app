@@ -1,8 +1,9 @@
 import * as language from "../utils/language"
-import * as utils from "../utils/utils"
 import { Plugins, Capacitor } from "@capacitor/core"
 import { modalController } from "@ionic/core"
 import * as Ionicons from 'ionicons/icons';
+
+const utils = require("../utils/utils")
 
 export async function showRegister(){
     let appLang = this.state.lang
